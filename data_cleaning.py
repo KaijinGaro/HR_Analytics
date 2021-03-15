@@ -8,12 +8,22 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.impute import KNNImputer
+from sklearn.model_selection import train_test_split
 import seaborn as sns
 PATH_TRAIN = "data/aug_train.csv"
 PATH_TEST = "data/aug_test.csv"
 
 df = pd.read_csv(PATH_TRAIN)
 
+
+
+# =============================================================================
+# split before replacing nans with mode
+# do all cleaning that is independent of the train/test set
+# transfer imputation on set specific values to data preprocessing file
+# preserve exploratory cleraning components to jupyter notebook
+# Fianlly, make the cleaning stage a reusable pipeline.
+# =============================================================================
 #Enrollee is unique
 print(len(df.enrollee_id.unique()))
 
@@ -68,6 +78,25 @@ d = del_min_nans(ignore_nans)
 # Add new category to the gender column 
 d['gender']=d['gender'].apply(lambda x: "Non disclosure" if x is np.nan else x)
 
+#Encode open intervals
+def encode_open_interval(data_f,feature,upper,lower,inplace=True):
+    target = data_f[feature]
+    list_enc = []
+    for element in target:
+        if upper in element:
+            list_enc.append(str(int(element[1:])+1))
+        elif lower in element:
+            list_enc.append(str(0))
+        else:
+            list_enc.append(element)
+    data_f[feature]=list_enc
+
+##Experience Encode
+encode_open_interval(d,'experience',upper='>',lower='<')
+
+##Last job Encode
+encode_open_interval(d,'last_new_job',upper='>',lower='never')
+
 # Major discipline imputation with most freequent varialbe(distribution highly 
 # inclined towards STEM).
 d['major_discipline'].fillna(d.major_discipline.mode()[0],inplace=True)
@@ -98,5 +127,16 @@ wo_company_type = d.drop(columns=['company_size'],axis=1)
 wo_company_type['is_avg_nan'] = wo_company_type['avg_company_size'].apply(lambda x: True if np.isnan(x) else False) 
 wo_company_type['avg_company_size'].fillna(wo_company_type.avg_company_size.mode()[0],inplace=True)
 
-wo_company_type.to_csv("data/aug_train_cleaned.csv")
+
+
+#Enrolled University Encode
+#Education Encode
+#Experience clean open intervals
+# =============================================================================
+#     print(target.unique())
+#     upper_limit = str(filter(lambda x: '>' in str(x), target.unique()))[1:]
+#     lower_limit = str(filter(lambda x: '<' in str(x), target.unique()))[1:]
+# =============================================================================
+wo_company_type.to_csv("data/aug_train_cleaned.csv",index=False)
+
 
