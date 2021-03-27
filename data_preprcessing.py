@@ -9,9 +9,10 @@ from collections import Counter
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder, LabelBinarizer, StandardScaler
 from sklearn.compose import ColumnTransformer
+import os
 
-PATH = "data/aug_train_cleaned.csv"
-data = pd.read_csv(PATH)
+DATA_PATH = "data/"
+data = pd.read_csv(os.path.join(DATA_PATH,"aug_train_cleaned.csv"))
 
 ##Feature engineering. 
 
@@ -64,7 +65,7 @@ def binarize(data,feature):
 
 data['relevent_experience']=binarize(data,'relevent_experience')     
 
-def get_ohe_cols(data, nominal_features):
+def get_ohe_cols(data, nominal_features, qual_features):
     col_list = list(data.columns)
     enc_list = []
     
@@ -76,15 +77,16 @@ def get_ohe_cols(data, nominal_features):
                # col_list.insert(index+app_idx,attr_name+str(app_idx))
                #print(attr_name,"done")
                enc_list.append(attr_name+str(app_idx))
-    return enc_list+col_list 
+    col_list.remove(qual_features[0])
+    return enc_list+qual_features+col_list 
 
 def get_tsfm_index(data,feature_list):
     return [idx for idx,i in enumerate(data.columns) if i in feature_list]
 
 
-cols = get_ohe_cols(data, nominal_features)      
+cols = get_ohe_cols(data, nominal_features , ['city_development_index'])      
 ohe_pipeline = ColumnTransformer([('encoder', OneHotEncoder(), get_tsfm_index(data, nominal_features)),
-                                  ('scaler', StandardScaler(), get_tsfm_index(data, ['city_development_index']))], remainder='passthrough')
+                                 ('scaler', StandardScaler(), get_tsfm_index(data, ['city_development_index']))], remainder='passthrough')
 #le_pipeline = ColumnTransformer([('le_encoder', LabelEncoder(), [data.columns.get_loc("relevent_experience")])], remainder='passthrough')
 ohed = pd.DataFrame(ohe_pipeline.fit_transform(data),columns=cols)
 
@@ -95,6 +97,9 @@ def get_dummies(data,ohe_variables=None):
     return drop_vars
 
 final_data = ohed.drop(columns = get_dummies(data, nominal_features),axis=1)
+
+if not os.path.exists(os.path.join(DATA_PATH,"aug_preprocessed_training_data.csv")):
+    final_data.to_csv(os.path.join(DATA_PATH,"aug_preprocessed_training_data.csv"),index=False)
 
 #wo_company_type.to_csv("data/aug_train_cleaned.csv",index=False)
 
